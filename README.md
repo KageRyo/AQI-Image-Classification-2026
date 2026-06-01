@@ -139,3 +139,19 @@ python ensemble_three.py \
   --third-output-dir outputs/efficientnet_b3 \
   --output-dir outputs/ensemble_b2_b3
 ```
+
+## Full-Data Refit
+
+After model selection, legally reuse all public `train_data.csv` and
+`val_data.csv` labels for a low-learning-rate final refit:
+
+```bash
+torchrun --standalone --nproc_per_node=2 refit.py \
+  --data-dir data \
+  --checkpoint models/efficientnet_b3/final_model.pt \
+  --output-dir outputs/efficientnet_b3_refit \
+  --model-dir models/efficientnet_b3_refit \
+  --epochs 3 \
+  --batch-size 32 \
+  --tta
+```

@@ -19,6 +19,7 @@ dependencies = [
 aqi-download = "download_data:main"
 aqi-ensemble = "ensemble:main"
 aqi-ensemble-three = "ensemble_three:main"
+aqi-refit = "refit:main"
 aqi-train = "main:main"
 
 [build-system]
@@ -26,4 +27,4 @@ requires = ["setuptools>=75"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-py-modules = ["download_data", "ensemble", "ensemble_three", "main"]
+py-modules = ["download_data", "ensemble", "ensemble_three", "main", "refit"]
