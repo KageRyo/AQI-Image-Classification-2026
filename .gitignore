@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Local environments
+.venv/
+.env
+
+# Dataset, trained models, and generated artifacts
+data/*
+!data/.gitkeep
+models/*
+!models/.gitkeep
+outputs/*
+!outputs/.gitkeep
+*.zip
+
+# Kaggle credentials
+kaggle.json
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
