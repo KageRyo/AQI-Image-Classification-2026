@@ -179,3 +179,17 @@ python blend_fixed.py \
   --weights 45 55 \
   --output-dir outputs/ensemble_refit
 ```
+
+For the validation-selected EfficientNet and ConvNeXt ensemble, refit all four
+checkpoints and reuse the fixed validation weights:
+
+```bash
+python blend_fixed.py \
+  --output-dirs \
+    outputs/efficientnet_b2_refit \
+    outputs/efficientnet_b2_seed_123_refit \
+    outputs/efficientnet_b3_refit \
+    outputs/convnext_tiny_refit \
+  --weights 6 39 5 50 \
+  --output-dir outputs/ensemble_refit_b2_b3_convnext
+```
