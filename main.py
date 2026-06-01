@@ -34,9 +34,11 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.distributed import DistributedSampler
 from torchvision.models import (
+    ConvNeXt_Tiny_Weights,
     EfficientNet_B0_Weights,
     EfficientNet_B2_Weights,
     EfficientNet_B3_Weights,
+    convnext_tiny,
     efficientnet_b0,
     efficientnet_b2,
     efficientnet_b3,
@@ -71,7 +73,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
         "--model-name",
-        choices=["efficientnet_b0", "efficientnet_b2", "efficientnet_b3"],
+        choices=["efficientnet_b0", "efficientnet_b2", "efficientnet_b3", "convnext_tiny"],
         default="efficientnet_b0",
     )
     parser.add_argument("--image-size", type=int, default=None)
@@ -202,7 +204,12 @@ def make_loader(
 
 
 def default_image_size(model_name: str) -> int:
-    return {"efficientnet_b0": 224, "efficientnet_b2": 288, "efficientnet_b3": 300}[model_name]
+    return {
+        "efficientnet_b0": 224,
+        "efficientnet_b2": 288,
+        "efficientnet_b3": 300,
+        "convnext_tiny": 224,
+    }[model_name]
 
 
 def build_model(model_name: str, pretrained: bool) -> nn.Module:
@@ -210,10 +217,13 @@ def build_model(model_name: str, pretrained: bool) -> nn.Module:
         "efficientnet_b0": (efficientnet_b0, EfficientNet_B0_Weights.DEFAULT),
         "efficientnet_b2": (efficientnet_b2, EfficientNet_B2_Weights.DEFAULT),
         "efficientnet_b3": (efficientnet_b3, EfficientNet_B3_Weights.DEFAULT),
+        "convnext_tiny": (convnext_tiny, ConvNeXt_Tiny_Weights.DEFAULT),
     }
     builder, default_weights = builders[model_name]
     model = builder(weights=default_weights if pretrained else None)
-    model.classifier[1] = nn.Linear(model.classifier[1].in_features, len(CLASSES))
+    final_layer_index = 2 if model_name == "convnext_tiny" else 1
+    final_layer = model.classifier[final_layer_index]
+    model.classifier[final_layer_index] = nn.Linear(final_layer.in_features, len(CLASSES))
     return model
 
 

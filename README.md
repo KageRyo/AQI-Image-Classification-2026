@@ -93,6 +93,20 @@ torchrun --standalone --nproc_per_node=2 main.py \
   --tta
 ```
 
+ConvNeXt Tiny provides a second architecture family for a more diverse
+ensemble candidate:
+
+```bash
+torchrun --standalone --nproc_per_node=2 main.py \
+  --data-dir data \
+  --output-dir outputs/convnext_tiny \
+  --model-dir models/convnext_tiny \
+  --model-name convnext_tiny \
+  --epochs 30 \
+  --batch-size 32 \
+  --tta
+```
+
 ## Outputs
 
 The best validation ROC AUC checkpoint is saved to:
