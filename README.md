@@ -104,3 +104,15 @@ roc_auc_val.png
 ```
 
 Generated data, models, and outputs are ignored by Git.
+
+## Ensemble
+
+Training writes reusable train, validation, and test probability arrays. Blend
+two experiments and select the best validation ROC AUC weight with:
+
+```bash
+python ensemble.py \
+  --first-output-dir outputs/efficientnet_b2 \
+  --second-output-dir outputs/efficientnet_b2_seed_123 \
+  --output-dir outputs/ensemble_b2
+```

@@ -523,6 +523,9 @@ def main() -> None:
             "train": calculate_metrics(train_labels, train_probabilities),
             "val": calculate_metrics(val_labels, val_probabilities),
         }
+        np.save(args.output_dir / "train_probabilities.npy", train_probabilities)
+        np.save(args.output_dir / "val_probabilities.npy", val_probabilities)
+        np.save(args.output_dir / "test_probabilities.npy", test_probabilities)
         (args.output_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
         report = classification_report(val_labels, val_probabilities.argmax(axis=1), target_names=CLASSES)
         (args.output_dir / "classification_report_val.txt").write_text(report)
