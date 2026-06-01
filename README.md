@@ -129,3 +129,13 @@ python ensemble.py \
   --second-output-dir outputs/efficientnet_b2_seed_123 \
   --output-dir outputs/ensemble_b2
 ```
+
+Blend three diverse experiments with:
+
+```bash
+python ensemble_three.py \
+  --first-output-dir outputs/efficientnet_b2 \
+  --second-output-dir outputs/efficientnet_b2_seed_123 \
+  --third-output-dir outputs/efficientnet_b3 \
+  --output-dir outputs/ensemble_b2_b3
+```
