@@ -80,6 +80,19 @@ torchrun --standalone --nproc_per_node=2 main.py \
   --tta
 ```
 
+EfficientNet-B3 is available as a more diverse 300-pixel ensemble candidate:
+
+```bash
+torchrun --standalone --nproc_per_node=2 main.py \
+  --data-dir data \
+  --output-dir outputs/efficientnet_b3 \
+  --model-dir models/efficientnet_b3 \
+  --model-name efficientnet_b3 \
+  --epochs 30 \
+  --batch-size 32 \
+  --tta
+```
+
 ## Outputs
 
 The best validation ROC AUC checkpoint is saved to:

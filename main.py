@@ -36,8 +36,10 @@ from torch.utils.data.distributed import DistributedSampler
 from torchvision.models import (
     EfficientNet_B0_Weights,
     EfficientNet_B2_Weights,
+    EfficientNet_B3_Weights,
     efficientnet_b0,
     efficientnet_b2,
+    efficientnet_b3,
 )
 from torchvision.transforms import v2
 
@@ -67,7 +69,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--label-smoothing", type=float, default=0.05)
     parser.add_argument("--patience", type=int, default=7)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--model-name", choices=["efficientnet_b0", "efficientnet_b2"], default="efficientnet_b0")
+    parser.add_argument(
+        "--model-name",
+        choices=["efficientnet_b0", "efficientnet_b2", "efficientnet_b3"],
+        default="efficientnet_b0",
+    )
     parser.add_argument("--image-size", type=int, default=None)
     parser.add_argument("--checkpoint", type=Path, default=None)
     parser.add_argument("--predict-only", action="store_true")
@@ -196,13 +202,14 @@ def make_loader(
 
 
 def default_image_size(model_name: str) -> int:
-    return {"efficientnet_b0": 224, "efficientnet_b2": 288}[model_name]
+    return {"efficientnet_b0": 224, "efficientnet_b2": 288, "efficientnet_b3": 300}[model_name]
 
 
 def build_model(model_name: str, pretrained: bool) -> nn.Module:
     builders = {
         "efficientnet_b0": (efficientnet_b0, EfficientNet_B0_Weights.DEFAULT),
         "efficientnet_b2": (efficientnet_b2, EfficientNet_B2_Weights.DEFAULT),
+        "efficientnet_b3": (efficientnet_b3, EfficientNet_B3_Weights.DEFAULT),
     }
     builder, default_weights = builders[model_name]
     model = builder(weights=default_weights if pretrained else None)
