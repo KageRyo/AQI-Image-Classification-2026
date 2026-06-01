@@ -66,6 +66,20 @@ torchrun --standalone --nproc_per_node=2 main.py \
 `--batch-size` is per GPU, so the two-GPU effective batch size is `128`.
 Reduce it if GPU memory is insufficient.
 
+For the stronger EfficientNet-B2 experiment, use its default 288-pixel input
+size and horizontal-flip test-time augmentation:
+
+```bash
+torchrun --standalone --nproc_per_node=2 main.py \
+  --data-dir data \
+  --output-dir outputs/efficientnet_b2 \
+  --model-dir models/efficientnet_b2 \
+  --model-name efficientnet_b2 \
+  --epochs 30 \
+  --batch-size 48 \
+  --tta
+```
+
 ## Outputs
 
 The best validation ROC AUC checkpoint is saved to:

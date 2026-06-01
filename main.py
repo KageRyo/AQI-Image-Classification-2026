@@ -33,7 +33,12 @@ from sklearn.utils.class_weight import compute_class_weight
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.distributed import DistributedSampler
-from torchvision.models import EfficientNet_B0_Weights, efficientnet_b0
+from torchvision.models import (
+    EfficientNet_B0_Weights,
+    EfficientNet_B2_Weights,
+    efficientnet_b0,
+    efficientnet_b2,
+)
 from torchvision.transforms import v2
 
 CLASSES = [
@@ -55,12 +60,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--batch-size", type=int, default=64, help="Per-GPU batch size.")
     parser.add_argument("--num-workers", type=int, default=8)
-    parser.add_argument("--learning-rate", type=float, default=3e-4)
+    parser.add_argument("--learning-rate", type=float, default=3e-4, help="Classifier learning rate.")
+    parser.add_argument("--backbone-learning-rate", type=float, default=3e-5)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
+    parser.add_argument("--min-learning-rate", type=float, default=1e-6)
+    parser.add_argument("--label-smoothing", type=float, default=0.05)
     parser.add_argument("--patience", type=int, default=7)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--model-name", choices=["efficientnet_b0", "efficientnet_b2"], default="efficientnet_b0")
+    parser.add_argument("--image-size", type=int, default=None)
     parser.add_argument("--checkpoint", type=Path, default=None)
     parser.add_argument("--predict-only", action="store_true")
+    parser.add_argument("--tta", action="store_true", help="Average original and horizontal-flip predictions.")
     parser.add_argument("--no-pretrained", action="store_true")
     parser.add_argument("--no-amp", action="store_true")
     return parser.parse_args()
@@ -142,11 +153,11 @@ class AQIDataset(Dataset):
         return image, CLASS_TO_IDX[row["AQI_Class"]]
 
 
-def make_transforms() -> tuple[v2.Compose, v2.Compose]:
+def make_transforms(image_size: int) -> tuple[v2.Compose, v2.Compose]:
     normalize = v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     train_transform = v2.Compose(
         [
-            v2.RandomResizedCrop((224, 224), scale=(0.8, 1.0)),
+            v2.RandomResizedCrop((image_size, image_size), scale=(0.8, 1.0)),
             v2.RandomHorizontalFlip(),
             v2.RandomRotation(8),
             v2.ColorJitter(brightness=0.15, contrast=0.15, saturation=0.1),
@@ -157,7 +168,7 @@ def make_transforms() -> tuple[v2.Compose, v2.Compose]:
     )
     eval_transform = v2.Compose(
         [
-            v2.Resize((224, 224)),
+            v2.Resize((image_size, image_size)),
             v2.ToImage(),
             v2.ToDtype(torch.float32, scale=True),
             normalize,
@@ -184,9 +195,17 @@ def make_loader(
     )
 
 
-def build_model(pretrained: bool) -> nn.Module:
-    weights = EfficientNet_B0_Weights.DEFAULT if pretrained else None
-    model = efficientnet_b0(weights=weights)
+def default_image_size(model_name: str) -> int:
+    return {"efficientnet_b0": 224, "efficientnet_b2": 288}[model_name]
+
+
+def build_model(model_name: str, pretrained: bool) -> nn.Module:
+    builders = {
+        "efficientnet_b0": (efficientnet_b0, EfficientNet_B0_Weights.DEFAULT),
+        "efficientnet_b2": (efficientnet_b2, EfficientNet_B2_Weights.DEFAULT),
+    }
+    builder, default_weights = builders[model_name]
+    model = builder(weights=default_weights if pretrained else None)
     model.classifier[1] = nn.Linear(model.classifier[1].in_features, len(CLASSES))
     return model
 
@@ -230,7 +249,7 @@ def train_one_epoch(
 
 @torch.inference_mode()
 def predict(
-    model: nn.Module, loader: DataLoader, device: torch.device
+    model: nn.Module, loader: DataLoader, device: torch.device, tta: bool = False
 ) -> tuple[np.ndarray, np.ndarray | None]:
     model.eval()
     probabilities: list[np.ndarray] = []
@@ -241,8 +260,12 @@ def predict(
             labels.append(batch_labels.numpy())
         else:
             images = batch
-        logits = model(images.to(device, non_blocking=True))
-        probabilities.append(torch.softmax(logits, dim=1).cpu().numpy())
+        images = images.to(device, non_blocking=True)
+        batch_probabilities = torch.softmax(model(images), dim=1)
+        if tta:
+            flipped_probabilities = torch.softmax(model(torch.flip(images, dims=[3])), dim=1)
+            batch_probabilities = (batch_probabilities + flipped_probabilities) / 2
+        probabilities.append(batch_probabilities.cpu().numpy())
     all_probabilities = np.concatenate(probabilities)
     all_labels = np.concatenate(labels) if labels else None
     return all_probabilities, all_labels
@@ -323,9 +346,17 @@ def plot_roc(labels: np.ndarray, probabilities: np.ndarray, output_dir: Path) ->
     plt.close()
 
 
-def save_checkpoint(model: nn.Module, path: Path, epoch: int, metrics: dict[str, float]) -> None:
+def save_checkpoint(
+    model: nn.Module, path: Path, epoch: int, metrics: dict[str, float], model_name: str, image_size: int
+) -> None:
     torch.save(
-        {"model_state_dict": unwrap_model(model).state_dict(), "epoch": epoch, "metrics": metrics},
+        {
+            "model_state_dict": unwrap_model(model).state_dict(),
+            "epoch": epoch,
+            "metrics": metrics,
+            "model_name": model_name,
+            "image_size": image_size,
+        },
         path,
     )
 
@@ -334,6 +365,15 @@ def load_checkpoint(model: nn.Module, path: Path, device: torch.device) -> dict:
     checkpoint = torch.load(path, map_location=device, weights_only=True)
     model.load_state_dict(checkpoint["model_state_dict"])
     return checkpoint
+
+
+def read_checkpoint_metadata(path: Path) -> dict:
+    checkpoint = torch.load(path, map_location="cpu", weights_only=True)
+    return {
+        key: checkpoint[key]
+        for key in ["model_name", "image_size"]
+        if key in checkpoint
+    }
 
 
 def validate_csvs(train_df: pd.DataFrame, val_df: pd.DataFrame, test_df: pd.DataFrame) -> None:
@@ -370,6 +410,11 @@ def main() -> None:
     seed_everything(args.seed + rank)
     device = torch.device(f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu")
     amp_enabled = device.type == "cuda" and not args.no_amp
+    if args.checkpoint:
+        checkpoint_metadata = read_checkpoint_metadata(args.checkpoint)
+        args.model_name = checkpoint_metadata.get("model_name", args.model_name)
+        args.image_size = checkpoint_metadata.get("image_size", args.image_size)
+    image_size = args.image_size or default_image_size(args.model_name)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     args.model_dir.mkdir(parents=True, exist_ok=True)
@@ -380,7 +425,7 @@ def main() -> None:
     sample_path = find_csv(args.data_dir, "sample_submission.csv")
     validate_csvs(train_df, val_df, test_df)
 
-    train_transform, eval_transform = make_transforms()
+    train_transform, eval_transform = make_transforms(image_size)
     train_dataset = AQIDataset(train_df, image_dir, train_transform, labeled=True)
     train_eval_dataset = AQIDataset(train_df, image_dir, eval_transform, labeled=True)
     val_dataset = AQIDataset(val_df, image_dir, eval_transform, labeled=True)
@@ -388,7 +433,7 @@ def main() -> None:
     sampler = DistributedSampler(train_dataset, shuffle=True) if world_size > 1 else None
     train_loader = make_loader(train_dataset, args.batch_size, args.num_workers, shuffle=True, sampler=sampler)
 
-    model = build_model(pretrained=not args.no_pretrained).to(device)
+    model = build_model(args.model_name, pretrained=not args.no_pretrained).to(device)
     if args.checkpoint:
         load_checkpoint(model, args.checkpoint, device)
     if world_size > 1:
@@ -401,8 +446,21 @@ def main() -> None:
             classes=np.arange(len(CLASSES)),
             y=train_df["AQI_Class"].map(CLASS_TO_IDX).to_numpy(),
         )
-        criterion = nn.CrossEntropyLoss(weight=torch.tensor(class_weights, dtype=torch.float32, device=device))
-        optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+        criterion = nn.CrossEntropyLoss(
+            weight=torch.tensor(class_weights, dtype=torch.float32, device=device),
+            label_smoothing=args.label_smoothing,
+        )
+        unwrapped_model = unwrap_model(model)
+        optimizer = torch.optim.AdamW(
+            [
+                {"params": unwrapped_model.features.parameters(), "lr": args.backbone_learning_rate},
+                {"params": unwrapped_model.classifier.parameters(), "lr": args.learning_rate},
+            ],
+            weight_decay=args.weight_decay,
+        )
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=args.epochs, eta_min=args.min_learning_rate
+        )
         scaler = torch.amp.GradScaler("cuda", enabled=amp_enabled)
         history: list[dict[str, float]] = []
         best_auc = -np.inf
@@ -421,7 +479,13 @@ def main() -> None:
                 train_metrics = calculate_metrics(train_labels, train_probabilities)
                 val_metrics = calculate_metrics(val_labels, val_probabilities)
                 val_loss = evaluate_loss(eval_model, val_loader, criterion, device)
-                row = {"epoch": epoch, "train_loss": train_loss, "val_loss": val_loss}
+                row = {
+                    "epoch": epoch,
+                    "train_loss": train_loss,
+                    "val_loss": val_loss,
+                    "backbone_learning_rate": optimizer.param_groups[0]["lr"],
+                    "classifier_learning_rate": optimizer.param_groups[1]["lr"],
+                }
                 row.update({f"train_{key}": value for key, value in train_metrics.items()})
                 row.update({f"val_{key}": value for key, value in val_metrics.items()})
                 history.append(row)
@@ -429,7 +493,7 @@ def main() -> None:
                 if val_metrics["macro_roc_auc"] > best_auc:
                     best_auc = val_metrics["macro_roc_auc"]
                     stale_epochs = 0
-                    save_checkpoint(model, best_path, epoch, val_metrics)
+                    save_checkpoint(model, best_path, epoch, val_metrics, args.model_name, image_size)
                 else:
                     stale_epochs += 1
                 should_stop.fill_(int(stale_epochs >= args.patience))
@@ -438,6 +502,7 @@ def main() -> None:
                 dist.barrier()
             if should_stop.item():
                 break
+            scheduler.step()
         if is_main(rank):
             (args.output_dir / "history.json").write_text(json.dumps(history, indent=2))
             plot_history(history, args.output_dir)
@@ -451,9 +516,9 @@ def main() -> None:
         train_eval_loader = make_loader(train_eval_dataset, args.batch_size, args.num_workers)
         val_loader = make_loader(val_dataset, args.batch_size, args.num_workers)
         test_loader = make_loader(test_dataset, args.batch_size, args.num_workers)
-        train_probabilities, train_labels = predict(inference_model, train_eval_loader, device)
-        val_probabilities, val_labels = predict(inference_model, val_loader, device)
-        test_probabilities, _ = predict(inference_model, test_loader, device)
+        train_probabilities, train_labels = predict(inference_model, train_eval_loader, device, tta=args.tta)
+        val_probabilities, val_labels = predict(inference_model, val_loader, device, tta=args.tta)
+        test_probabilities, _ = predict(inference_model, test_loader, device, tta=args.tta)
         metrics = {
             "train": calculate_metrics(train_labels, train_probabilities),
             "val": calculate_metrics(val_labels, val_probabilities),
