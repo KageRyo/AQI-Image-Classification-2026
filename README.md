@@ -155,3 +155,13 @@ torchrun --standalone --nproc_per_node=2 refit.py \
   --batch-size 32 \
   --tta
 ```
+
+Refit removes the held-out validation split. Reuse validation-selected weights
+instead of tuning against hidden test results:
+
+```bash
+python blend_fixed.py \
+  --output-dirs outputs/efficientnet_b2_refit outputs/efficientnet_b3_refit \
+  --weights 45 55 \
+  --output-dir outputs/ensemble_refit
+```
