@@ -450,7 +450,15 @@ def main() -> None:
     sampler = DistributedSampler(train_dataset, shuffle=True) if world_size > 1 else None
     train_loader = make_loader(train_dataset, args.batch_size, args.num_workers, shuffle=True, sampler=sampler)
 
-    model = build_model(args.model_name, pretrained=not args.no_pretrained).to(device)
+    pretrained = not args.no_pretrained
+    if world_size > 1 and pretrained:
+        model = build_model(args.model_name, pretrained=True) if is_main(rank) else None
+        dist.barrier()
+        if model is None:
+            model = build_model(args.model_name, pretrained=True)
+    else:
+        model = build_model(args.model_name, pretrained=pretrained)
+    model = model.to(device)
     if args.checkpoint:
         load_checkpoint(model, args.checkpoint, device)
     if world_size > 1:
