@@ -1,0 +1,92 @@
+# AQI Image Classification 2026
+
+PyTorch baseline for the 2026 Deep Learning final exam Kaggle competition.
+The model classifies each air-pollution image into one of six AQI classes and
+writes the six probabilities required by Kaggle.
+
+## Environment
+
+The existing `dl-class-ryo` Conda environment already contains PyTorch,
+Torchvision, Pandas, NumPy, Matplotlib, and scikit-learn. Use it for this
+project:
+
+```bash
+conda activate dl-class-ryo
+```
+
+Jupyter is not required. The complete workflow runs from `main.py`.
+
+Install this project in editable mode if the environment needs any missing
+dependencies:
+
+```bash
+python -m pip install -e .
+```
+
+## Dataset
+
+Download only the public competition files and place them under `data/`:
+
+```text
+data/
+├── images/
+├── train_data.csv
+├── val_data.csv
+├── test_data.csv
+└── sample_submission.csv
+```
+
+`test_data.csv` must contain filenames only. Do not use reconstructed or
+leaked test labels.
+
+After joining the competition and configuring Kaggle authentication, download
+and extract the public files with:
+
+```bash
+python download_data.py
+```
+
+## Train
+
+Use one GPU for an initial run:
+
+```bash
+python main.py --data-dir data --epochs 3
+```
+
+Use both local RTX 4090 GPUs for the full experiment:
+
+```bash
+torchrun --standalone --nproc_per_node=2 main.py \
+  --data-dir data \
+  --epochs 30 \
+  --batch-size 64
+```
+
+`--batch-size` is per GPU, so the two-GPU effective batch size is `128`.
+Reduce it if GPU memory is insufficient.
+
+## Outputs
+
+The best validation ROC AUC checkpoint is saved to:
+
+```text
+models/final_model.pt
+```
+
+The script writes these generated files under `outputs/`:
+
+```text
+submission.csv
+history.json
+metrics.json
+classification_report_val.txt
+training_loss.png
+training_accuracy.png
+training_macro_roc_auc.png
+confusion_matrix_train.png
+confusion_matrix_val.png
+roc_auc_val.png
+```
+
+Generated data, models, and outputs are ignored by Git.
