@@ -15,6 +15,11 @@ dependencies = [
     "torchvision>=0.20",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+]
+
 [project.scripts]
 aqi-download = "download_data:main"
 aqi-ensemble = "ensemble:main"
@@ -30,3 +35,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 py-modules = ["blend_fixed", "bonus_multitask", "download_data", "ensemble", "ensemble_three", "main", "refit"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

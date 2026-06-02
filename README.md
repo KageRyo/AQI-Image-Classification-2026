@@ -1,8 +1,26 @@
 # AQI Image Classification 2026
 
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.5%2B-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![Kaggle Public ROC AUC](https://img.shields.io/badge/Kaggle_Public_ROC_AUC-1.00000-20BEFF?logo=kaggle&logoColor=white)](https://www.kaggle.com/competitions/2026-dl-final-exam-india-nepal-aqi-classification)
+
 PyTorch baseline for the 2026 Deep Learning final exam Kaggle competition.
 The model classifies each air-pollution image into one of six AQI classes and
 writes the six probabilities required by Kaggle.
+
+## Results
+
+The final submission is a fixed-weight ensemble of EfficientNet-B2,
+EfficientNet-B3, and ConvNeXt Tiny checkpoints. The weights were selected using
+the public validation split before the selected checkpoints were refit on all
+public labeled data.
+
+| Metric | Score |
+|---|---:|
+| Validation ensemble ROC AUC | `0.99993954` |
+| Kaggle Public ROC AUC | `1.00000` |
+
+The Kaggle Private score remains unavailable until the competition closes.
 
 ## Environment
 
@@ -19,6 +37,13 @@ Install the project and its dependencies in editable mode:
 
 ```bash
 python -m pip install -e .
+```
+
+Install development dependencies and run the CPU unit tests:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest
 ```
 
 ## Dataset
