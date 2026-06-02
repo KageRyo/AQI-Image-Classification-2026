@@ -194,6 +194,27 @@ python blend_fixed.py \
   --output-dir outputs/ensemble_refit_b2_b3_convnext
 ```
 
+## Optional Bonus Predictions
+
+The optional multi-task workflow predicts `AQI`, `PM2.5`, `PM10`, `O3`, `CO`,
+`SO2`, and `NO2` without changing the Kaggle classification submission:
+
+```bash
+torchrun --standalone --nproc_per_node=2 bonus_multitask.py \
+  --data-dir data \
+  --classification-checkpoint models/convnext_tiny/final_model.pt \
+  --output-dir outputs/bonus_multitask \
+  --model-dir models/bonus_multitask \
+  --epochs 20 \
+  --batch-size 8 \
+  --tta
+```
+
+Some pollutant labels are missing in the public training data. The default
+`--missing-target-strategy mask` excludes only those missing labels from the
+regression loss. `mean` and `median` are available for explicit ablation
+experiments, but they introduce imputed target values.
+
 ## References
 
 This project uses only the public files distributed through the course Kaggle

@@ -20,6 +20,7 @@ aqi-download = "download_data:main"
 aqi-ensemble = "ensemble:main"
 aqi-ensemble-three = "ensemble_three:main"
 aqi-blend-fixed = "blend_fixed:main"
+aqi-bonus-multitask = "bonus_multitask:main"
 aqi-refit = "refit:main"
 aqi-train = "main:main"
 
@@ -28,4 +29,4 @@ requires = ["setuptools>=75"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-py-modules = ["blend_fixed", "download_data", "ensemble", "ensemble_three", "main", "refit"]
+py-modules = ["blend_fixed", "bonus_multitask", "download_data", "ensemble", "ensemble_three", "main", "refit"]
