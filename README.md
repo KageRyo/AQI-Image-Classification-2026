@@ -193,3 +193,15 @@ python blend_fixed.py \
   --weights 6 39 5 50 \
   --output-dir outputs/ensemble_refit_b2_b3_convnext
 ```
+
+## References
+
+This project uses only the public files distributed through the course Kaggle
+competition. The original dataset repository is cited for dataset provenance
+and documentation:
+
+- [2026 DL Final Exam - India & Nepal AQI Classification: Citation](https://www.kaggle.com/competitions/2026-dl-final-exam-india-nepal-aqi-classification/overview/citation)
+- [Air Pollution Image Dataset From India and Nepal: GitHub Repository](https://github.com/ICCC-Platform/Air-Pollution-Image-Dataset-From-India-and-Nepal)
+- Rouniyar, A., Utomo, S., A, J., & Hsiung, P.-A. (2023). *Air Pollution
+  Image Dataset from India and Nepal* [Data set]. Kaggle.
+  [https://doi.org/10.34740/KAGGLE/DS/3152196](https://doi.org/10.34740/KAGGLE/DS/3152196)
