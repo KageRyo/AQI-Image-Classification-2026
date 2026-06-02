@@ -6,18 +6,16 @@ writes the six probabilities required by Kaggle.
 
 ## Environment
 
-The existing `dl-class-ryo` Conda environment already contains PyTorch,
-Torchvision, Pandas, NumPy, Matplotlib, and scikit-learn. Use it for this
-project:
+Create and activate a Python 3.10+ Conda environment:
 
 ```bash
-conda activate dl-class-ryo
+conda create --name <environment-name> python=3.10
+conda activate <environment-name>
 ```
 
 Jupyter is not required. The complete workflow runs from `main.py`.
 
-Install this project in editable mode if the environment needs any missing
-dependencies:
+Install the project and its dependencies in editable mode:
 
 ```bash
 python -m pip install -e .
