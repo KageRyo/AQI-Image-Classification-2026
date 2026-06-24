@@ -2,6 +2,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.5%2B-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Kaggle Public ROC AUC](https://img.shields.io/badge/Kaggle_Public_ROC_AUC-1.00000-20BEFF?logo=kaggle&logoColor=white)](https://www.kaggle.com/competitions/2026-dl-final-exam-india-nepal-aqi-classification)
 
 PyTorch baseline for the 2026 Deep Learning final exam Kaggle competition.
@@ -237,6 +238,28 @@ Some pollutant labels are missing in the public training data. The default
 `--missing-target-strategy mask` excludes only those missing labels from the
 regression loss. `mean` and `median` are available for explicit ablation
 experiments, but they introduce imputed target values.
+
+## License
+
+The source code and project documentation in this repository are released under
+the MIT License. See [LICENSE](LICENSE).
+
+### Scope of the License
+
+The MIT License applies only to the code, scripts, configuration files, and
+documentation authored for this repository.
+
+It does **not** apply to the Kaggle competition page, competition rules,
+leaderboard, evaluation system, original dataset, downloaded image files,
+CSV files, sample submissions, or any other competition-provided materials.
+
+The air-pollution image dataset and Kaggle competition materials remain subject
+to their original licenses, citation requirements, and terms of use. Users are
+responsible for complying with those terms when downloading the data, training
+models, or submitting predictions.
+
+Third-party libraries, pretrained models, and external assets used by this
+project remain subject to their respective licenses.
 
 ## References
 
